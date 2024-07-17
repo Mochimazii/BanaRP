@@ -20,7 +20,7 @@ Custom Render Pipeline with Unity SRP, include following features:
 
 #### TAA:
 
-<img src="Image/noTAA.png" width="50%"/> <img src="Image/TAA.png" width="50%"/>
+<img src="Image/noTAA.png" width="49%"/><img src="Image/TAA.png" width="49%"/>
 
 [//]: # (![noTAA]&#40;Image/noTAA.png&#41;![TAA]&#40;Image/TAA.png&#41;)
 
