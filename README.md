@@ -1,7 +1,5 @@
 ﻿# BanaRenderPipeline
 
----
-
 Custom Render Pipeline with Unity SRP, include following features:
 - Defered Shading Pipeline
 - PBR / IBL
@@ -11,8 +9,6 @@ Custom Render Pipeline with Unity SRP, include following features:
 - Cluster Based Defered Lighting
 
 # Gallery
-
----
 
 #### PBR / IBL:
 
@@ -24,10 +20,14 @@ Custom Render Pipeline with Unity SRP, include following features:
 
 #### TAA:
 
+![noTAA](Image/noTAA.png) ![TAA](Image/TAA.png)
+
 #### GPU Instance / frustum culling / oclussion culling using compute shader:
+
+![GPUInstance](Image/GPUCull.png)
 
 #### Cluster based defered Lighting:
 
-# Reference
+![Cluster](Image/clusterLight.png)
 
----
+# Reference
