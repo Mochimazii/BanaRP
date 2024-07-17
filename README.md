@@ -18,11 +18,13 @@ Custom Render Pipeline with Unity SRP, include following features:
 
 ![CSM](Image/CSMPCSS.png)
 
+#### no TAA:
+
+![noTAA](Image/noTAA.png)
+
 #### TAA:
 
-<img src="Image/noTAA.png" width="49%"/><img src="Image/TAA.png" width="49%"/>
-
-[//]: # (![noTAA]&#40;Image/noTAA.png&#41;![TAA]&#40;Image/TAA.png&#41;)
+![TAA](Image/TAA.png)
 
 #### GPU Instance / frustum culling / oclussion culling using compute shader:
 
