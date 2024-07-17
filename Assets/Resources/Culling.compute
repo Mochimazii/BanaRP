@@ -1,0 +1,135 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+#pragma enable_d3d11_debug_symbols
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+bool _occlusionCull;//todo:not set
+int _instanceCount;
+int _depthTextureSize;
+float4 _planes[6];
+float4 _bounds[8];
+
+float4x4 _vpMatrix;
+Texture2D _hizBuffer;
+
+RWStructuredBuffer<float4x4> _matrixBuffer;             // 全部的变换矩阵
+AppendStructuredBuffer<float4x4> _validMatrixBuffer;    // 剔除后剩余 instance 的变换矩阵
+RWStructuredBuffer<uint> _argsBuffer;                   // 绘制参数
+
+// true 在内部, false 在外部
+// boundingbox 8 个点在视锥外的要剔除
+bool GetSide(float4 plane, float3 p)
+{
+    return (dot(plane.xyz, p) + plane.w) > 0;   
+}
+
+// true box 在视椎体外, false box 在视椎体内
+bool IsOutSide(float4 plane, float4 bounds[8])
+{
+    for (int i = 0; i < 8; ++i)
+    {
+        if (GetSide(plane, bounds[i].xyz))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Visibility(float4 planes[6], float4 bounds[8])
+{
+    for (int i = 0; i < 6; ++i)
+    {
+        if (IsOutSide(planes[i], bounds))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool OcclusionVisibility(float4 bounds[8], float4x4 _vpMatrix, Texture2D _hizBuffer)
+{
+    float xmin = 10, xmax = -10, ymin = 10, ymax = -10, zmin = 10, zmax = -10;
+    for (int i = 0; i < 8; ++i)
+    {
+        // world to clip space
+        float4 ndcBound = mul(_vpMatrix, bounds[i]);
+        ndcBound /= ndcBound.w;
+
+        xmin = min(xmin, ndcBound.x);
+        xmax = max(xmax, ndcBound.x);
+        ymin = min(ymin, ndcBound.y);
+        ymax = max(ymax, ndcBound.y);
+        zmin = min(zmin, ndcBound.z);
+        zmax = max(zmax, ndcBound.z);
+    }
+
+    float2 uvLeftBottom = float2(xmin, ymin) * 0.5 + 0.5;
+    float2 uvRightTop = float2(xmax, ymax) * 0.5 + 0.5;
+
+    float uvboxSize = saturate(max(xmax - xmin, ymax - ymin) * 0.5);
+    uint mipmapLevel = clamp(log2(uvboxSize * _depthTextureSize), 0, 10);
+    // 原式: _depthTextureSize / (1 << mipmapLevel);
+    uint mipmapSize = _depthTextureSize >> mipmapLevel;
+
+    uint2 pixelLeftBottom =  uint2(clamp(uvLeftBottom.x * mipmapSize, 0, mipmapSize - 1), clamp(uvLeftBottom.y * mipmapSize, 0, mipmapSize - 1));
+    uint2 pixelRightTop =  uint2(clamp(uvRightTop.x * mipmapSize, 0, mipmapSize - 1), clamp(uvRightTop.y * mipmapSize, 0, mipmapSize - 1));
+
+    float textureDepth = _hizBuffer.mips[mipmapLevel][pixelLeftBottom].x;
+
+    #ifdef UNITY_REVERSED_Z
+    // 取最小深度值(离摄像机最远)
+    textureDepth = min(textureDepth, _hizBuffer.mips[mipmapLevel][pixelRightTop].x);
+    textureDepth = min(textureDepth, _hizBuffer.mips[mipmapLevel][uint2(pixelRightTop.x, pixelLeftBottom.y)].x);
+    textureDepth = min(textureDepth, _hizBuffer.mips[mipmapLevel][uint2(pixelLeftBottom.x, pixelRightTop.y)].x);
+
+    if (textureDepth > zmax)
+    {
+        return false;
+    }
+    #else
+    textureDepth = max(textureDepth, _hizBuffer.mips[mipmapLevel][pixelRightTop].x);
+    textureDepth = max(textureDepth, _hizBuffer.mips[mipmapLevel][uint2(pixelRightTop.x, pixelLeftBottom.y)].x);
+    textureDepth = max(textureDepth, _hizBuffer.mips[mipmapLevel][uint2(pixelLeftBottom.x, pixelRightTop.y)].x);
+
+    if (textureDepth < zmin)
+    {
+        return false;
+    }
+    #endif
+
+    return true;
+}
+
+//  int3 SV_GroupID 当前线程所在的线程组的ID，取值范围为(0,0,0)到(gX-1,gY-1,gZ-1)
+//  int3 SV_GroupThreadID 当前线程在线程组中的ID，取值范围为(0,0,0)到(tX-1,tY-1,tZ-1)
+//  int3 SV_DispatchThreadID 当前线程在所有线程组的ID，取值范围为(0,0,0)到(gX*tX-1, gY*tY-1, gZ*tZ-1)
+//  uint3 SV_GroupIndex 当前线程在所在线程组内的下标，取值范围为0到tX*tY*tZ-1
+
+[numthreads(128,1,1)]
+void CSMain (uint3 tid : SV_DispatchThreadID)
+{
+    uint index = tid.x;
+    if (index >= (uint)_instanceCount) return;
+
+    float4x4 ObjectToWorld = _matrixBuffer[index];
+
+    // bounding box to world space
+    float4 worldBounds[8];
+    for (int i = 0; i < 8; ++i)
+    {
+        worldBounds[i] = mul(ObjectToWorld, _bounds[i]);
+    }
+    bool vis = Visibility(_planes, worldBounds);
+    if (!vis) return;
+
+    if (_occlusionCull)
+    {
+        bool occlusionVis = OcclusionVisibility(worldBounds, _vpMatrix, _hizBuffer);
+        if (!occlusionVis) return;
+    }
+    
+    _validMatrixBuffer.Append(ObjectToWorld);
+    InterlockedAdd(_argsBuffer[1], 1);
+}

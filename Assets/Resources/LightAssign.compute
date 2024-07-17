@@ -1,0 +1,121 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel LightAssign
+#pragma enable_d3d11_debug_symbols
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+struct ClusterBox
+{
+    float3 p0, p1, p2, p3, p4, p5, p6, p7;
+};
+
+struct PointLight
+{
+    float3 color;
+    float intensity;
+    float3 position;
+    float range;
+};
+
+struct LightIndex
+{
+    int start;
+    int count;
+};
+
+struct Normal
+{
+    float3 position;
+    float3 normal;
+};
+
+RWStructuredBuffer<ClusterBox> _clusterBuffer;
+RWStructuredBuffer<PointLight> _lightBuffer;
+RWStructuredBuffer<uint> _lightAssignBuffer;
+RWStructuredBuffer<LightIndex> _assignTable;
+// debug
+RWStructuredBuffer<Normal> _normalBuffer;
+
+int _maxNumLightsPerCluster;
+float _numClusterX;
+float _numClusterY;
+float _numClusterZ;
+int _numLights;
+
+uint Index3DTo1D(uint3 index)
+{
+    return index.z * _numClusterX * _numClusterY + index.y * _numClusterX + index.x;
+}
+
+float4 GetPlaneFunc(float3 p0, float3 p1, float3 p2)
+{
+    float3 v1 = p1 - p0;
+    float3 v2 = p2 - p0;
+    float3 n = normalize(cross(v1, v2));
+    float d = -dot(n, p0);
+    return float4(n, d);
+}
+
+bool PlaneSphereIntersect(float4 plane, float4 sphere)
+{
+    return plane.w + dot(plane.xyz, sphere.xyz) > - sphere.w;
+}
+
+bool ClusterLightIntersect(ClusterBox cluster, PointLight lit)
+{
+    // world space (left hand coordinate)
+    float4 Planes[6] = {
+        -GetPlaneFunc(cluster.p0, cluster.p1, cluster.p2),
+        -GetPlaneFunc(cluster.p0, cluster.p4, cluster.p1),
+        -GetPlaneFunc(cluster.p0, cluster.p2, cluster.p4),
+        -GetPlaneFunc(cluster.p7, cluster.p6, cluster.p3),
+        -GetPlaneFunc(cluster.p7, cluster.p3, cluster.p5),
+        -GetPlaneFunc(cluster.p7, cluster.p5, cluster.p6)
+    };
+
+    float4 sphere = float4(lit.position, lit.range);
+    for (int i = 0; i < 6; ++i)
+    {
+        if (!PlaneSphereIntersect(Planes[i], sphere)) return false;
+    }
+
+    return true;
+}
+
+//  int3 SV_GroupID 当前线程所在的线程组的ID，取值范围为(0,0,0)到(gX-1,gY-1,gZ-1)
+//  int3 SV_GroupThreadID 当前线程在线程组中的ID，取值范围为(0,0,0)到(tX-1,tY-1,tZ-1)
+//  int3 SV_DispatchThreadID 当前线程在所有线程组的ID，取值范围为(0,0,0)到(gX*tX-1, gY*tY-1, gZ*tZ-1)
+//  uint3 SV_GroupIndex 当前线程在所在线程组内的下标，取值范围为0到tX*tY*tZ-1
+
+[numthreads(16,16,1)]
+void LightAssign (int3 threadId : SV_GroupThreadID, int3 groupId : SV_GroupID)
+{
+    uint i = threadId.x, j = threadId.y, k = groupId.x;
+    uint3 clusterId_3D = uint3(i, j, k);
+    uint clusterId_1D = Index3DTo1D(clusterId_3D);
+    
+    ClusterBox cluster  = _clusterBuffer[clusterId_1D];
+    // index in light assign buffer
+    uint start = clusterId_1D * _maxNumLightsPerCluster;
+    uint end = start;
+
+    for (int lightId = 0; lightId < _numLights; ++lightId)
+    {
+        PointLight lit = _lightBuffer[lightId];
+        if (ClusterLightIntersect(cluster, lit))
+        {
+            _lightAssignBuffer[end++] = (uint)lightId;
+        }
+    }
+
+    LightIndex lightIndex;
+    lightIndex.start = start;
+    lightIndex.count = end - start;
+    _assignTable[clusterId_1D] = lightIndex;
+    // debug
+    Normal normal;
+    float4 plane = -GetPlaneFunc(cluster.p0, cluster.p4, cluster.p1);
+    float3 center = (cluster.p0 + cluster.p1 + cluster.p4 + cluster.p5) / 4;
+    normal.position = center;
+    normal.normal = plane.xyz;
+    _normalBuffer[clusterId_1D] = normal;
+}
