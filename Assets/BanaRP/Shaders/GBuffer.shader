@@ -167,7 +167,7 @@
                 out float4 GT0 : SV_Target0,
                 out float4 GT1 : SV_Target1,
                 out float4 GT2 : SV_Target2,
-                out float4 GT3 : SV_Target3)
+                out float3 GT3 : SV_Target3)
             {
                 float4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
                 clip(color.a - 0.5);
@@ -207,9 +207,9 @@
 
                 
                 GT0 = color;
-                GT1 = float4(normal * 0.5 + 0.5, 0);
+                GT1 = float4(normal * 0.5 + 0.5, ao);
                 GT2 = float4(motionVec,roughness,metallic);
-                GT3 = float4(emission,ao);
+                GT3 = float3(emission);
             }
             
             ENDHLSL

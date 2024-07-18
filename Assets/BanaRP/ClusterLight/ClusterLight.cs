@@ -142,6 +142,14 @@ public class ClusterLight
         lightAssignCS.SetInt("_numLights", count);
     }
 
+    struct Cone
+    {
+        Vector3 position;
+        Vector3 direction;
+        float height;
+        float bottomRadius;
+    }
+    
     public void LightAssign()
     {
         lightAssignCS.SetInt("_maxNumLightsPerCluster", MAX_NUM_LIGHTS_PER_CLUSTER);

@@ -56,6 +56,12 @@ Custom Render Pipeline with Unity SRP, include following features:
 
 [10] KillerAery, ["实时阴影技术（1）Shadow Mapping"](https://www.cnblogs.com/KillerAery/p/15201310.html)
 
+[11] Ubp.a, ["深入理解 PBR/基于图像照明 (IBL)"](https://zhuanlan.zhihu.com/p/66518450)
+
+[12] KillerAery, ["实时阴影技术（1）Shadow Mapping"](https://www.cnblogs.com/KillerAery/p/15201310.html#cascade-shadow-mapcsm)
+
+
+
 
 
 

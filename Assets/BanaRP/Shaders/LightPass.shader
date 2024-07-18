@@ -64,17 +64,18 @@
             float4 frag(v2f i, out float depthOut : SV_Depth) : SV_Target
             {
                 float2 uv = i.uv;
+                float4 GT1 = tex2D(_GT1, uv);
                 float4 GT2 = tex2D(_GT2, uv);
-                float4 GT3 = tex2D(_GT3, uv);
+                float3 GT3 = tex2D(_GT3, uv);
 
                 // 从 GBuffer 中获取数据
                 float3 albedo = tex2D(_GT0, uv).rgb;
-                float3 normal = tex2D(_GT1, uv).rgb * 2.0 - 1.0;
+                float3 normal = GT1.rgb * 2.0 - 1.0;
                 float2 motionVec = GT2.rg;
                 float roughness = GT2.b;
                 float metallic = GT2.a;
                 float3 emission = GT3.rgb;
-                float occlusion = GT3.a;
+                float ao = GT1.a;
                 
                 float d = tex2D(_gDepth, uv);
                 float d_linear = Linear01Depth(d, _ZBufferParams);
@@ -107,7 +108,7 @@
                     );
 
                 
-                float3 color = ambient * 0.1;
+                float3 color = ambient * ao;
                 float visibility = tex2D(_visibilityMap, uv).r;
                 
                 color += direct * visibility;

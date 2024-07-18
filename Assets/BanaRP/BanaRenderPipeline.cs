@@ -33,9 +33,9 @@ public class BanaRenderPipeline : RenderPipeline
         // 创建纹理
         gDepth  = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.Depth, RenderTextureReadWrite.Linear);
         gBuffers[0] = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
-        gBuffers[1] = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
+        gBuffers[1] = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
         gBuffers[2] = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
-        gBuffers[3] = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        gBuffers[3] = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.RGB111110Float, RenderTextureReadWrite.Linear);
         
         // 给纹理 ID 赋值
         for (int i = 0; i < 4; i++)
@@ -99,6 +99,7 @@ public class BanaRenderPipeline : RenderPipeline
             // 设置 shadow map
             Shader.SetGlobalTexture("_shadowMask", shadowMask);
             Shader.SetGlobalTexture("_visibilityMap", visibilityMap);
+            _csm.SetSplit(camera.nearClipPlane, camera.farClipPlane);
             for(int i=0; i<4; i++)
             {
                 Shader.SetGlobalTexture("_shadowtex"+i, csmShadowmaps[i]);

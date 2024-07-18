@@ -73,6 +73,30 @@ public class CSM
         };
     }
 
+    // 视锥分割:对数分割与线性分割混合
+    public void SetSplit(float near, float far, int splitCount = 4)
+    {
+        float[] splits = new float[splitCount];
+        for (int i = 1; i <= splitCount; i++)
+        {
+            float logSplit = near * Mathf.Pow(far / near, i / (float)splitCount);
+            float linearSplit = near + (far - near) * i / (float)splitCount;
+            splits[i-1] = Mathf.Lerp(logSplit, linearSplit, 0.5f);
+        }
+
+        for (int i = splitCount - 1; i >= 0; i--)
+        {
+            if (i == 0)
+            {
+                splits[i] /= far - near;
+                continue;
+            }
+            splits[i] = (splits[i] - splits[i - 1]) / (far - near);
+        }
+
+        this.splits = splits;
+    }
+    
     // 光源空间下视锥的AABB的世界坐标
     Vector3[] LightSpaceAABB(Vector3[] nearCorners, Vector3[] farCorners, Vector3 lightDir, int level)
     {

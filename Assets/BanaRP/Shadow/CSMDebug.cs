@@ -33,7 +33,7 @@ public class ShadowCameraDebug : MonoBehaviour
         // 直接用第Dimension个质数作为底数调用RadicalInverse即可
         return RadicalInverse(Dimension, Index);
     }
-    
+
     void Update()
     {
         Camera camera = GetComponent<Camera>();
@@ -43,18 +43,15 @@ public class ShadowCameraDebug : MonoBehaviour
         
         // 更新 shadowmap
         if (csm == null)csm = new CSM();
-        
+        csm.SetSplit(camera.nearClipPlane, camera.farClipPlane);
         csm.Update(camera, lightDir);
         if (DrawAABB)
         {
             csm.DebugDraw();
         }
         
-        // Halton test
-        // for (int i = 1; i <= 8; i++)
-        // {
-        //     double a = Halton(3, i);
-        //     Debug.Log("Halton 1:" + a);
-        // }
+
+        // 视锥分割 Test
+        
     }
 }
