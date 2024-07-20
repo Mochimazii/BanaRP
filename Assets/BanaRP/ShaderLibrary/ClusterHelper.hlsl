@@ -9,15 +9,29 @@ struct PointLight
     float range;
 };
 
+struct SpotLight
+{
+    float3 color;
+    float intensity;
+    float3 position;
+    float height;
+    float3 direction;
+    float bottomRadius;
+};
+
 struct LightIndex
 {
     int start;
-    int count;
+    int pointCount;
+    int spotCount;
 };
 
-StructuredBuffer<PointLight> _lightBuffer;
+// StructuredBuffer<PointLight> _lightBuffer;
 StructuredBuffer<uint> _lightAssignBuffer;
 StructuredBuffer<LightIndex> _assignTable;
+
+StructuredBuffer<PointLight> _pointLightBuffer;
+StructuredBuffer<SpotLight> _spotLightBuffer;
 
 float _numClusterX;
 float _numClusterY;

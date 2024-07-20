@@ -16,10 +16,21 @@ struct PointLight
     float range;
 };
 
+struct SpotLight
+{
+    float3 color;
+    float intensity;
+    float3 position;
+    float height;
+    float3 direction;
+    float bottomRadius;
+};
+
 struct LightIndex
 {
     int start;
-    int count;
+    int pointCount;
+    int spotCount;
 };
 
 struct Normal
@@ -32,6 +43,10 @@ RWStructuredBuffer<ClusterBox> _clusterBuffer;
 RWStructuredBuffer<PointLight> _lightBuffer;
 RWStructuredBuffer<uint> _lightAssignBuffer;
 RWStructuredBuffer<LightIndex> _assignTable;
+// test
+RWStructuredBuffer<PointLight> _pointLightBuffer;
+RWStructuredBuffer<SpotLight> _spotLightBuffer;
+RWTexture3D<int3> _clusterPointerBuffer;
 // debug
 RWStructuredBuffer<Normal> _normalBuffer;
 
@@ -39,7 +54,9 @@ int _maxNumLightsPerCluster;
 float _numClusterX;
 float _numClusterY;
 float _numClusterZ;
-int _numLights;
+int _pointNumLights;
+int _spotNumLights;
+// int _numLights;
 
 uint Index3DTo1D(uint3 index)
 {
@@ -60,7 +77,7 @@ bool PlaneSphereIntersect(float4 plane, float4 sphere)
     return plane.w + dot(plane.xyz, sphere.xyz) > - sphere.w;
 }
 
-bool ClusterLightIntersect(ClusterBox cluster, PointLight lit)
+bool ClusterPointLightIntersect(ClusterBox cluster, PointLight lit)
 {
     // world space (left hand coordinate)
     float4 Planes[6] = {
@@ -81,6 +98,40 @@ bool ClusterLightIntersect(ClusterBox cluster, PointLight lit)
     return true;
 }
 
+bool PlaneConeIntersect(float4 plane, SpotLight spotLight)
+{
+    if (dot(plane.xyz, spotLight.position) + plane.w > 0) return true;
+
+    float3 v = normalize(spotLight.direction);
+    float3 m = -cross(cross(plane.xyz, spotLight.direction), spotLight.direction);
+    m = normalize(m);
+    float3 farest_to_plane = spotLight.position + spotLight.height * v + spotLight.bottomRadius * m;
+
+    if (dot(plane.xyz, farest_to_plane) + plane.w > 0) return true;
+
+    return false;
+}
+
+bool ClusterSpotLightIntersect(ClusterBox cluster, SpotLight lit)
+{
+    // world space (left hand coordinate)
+    float4 Planes[6] = {
+        -GetPlaneFunc(cluster.p0, cluster.p1, cluster.p2),
+        -GetPlaneFunc(cluster.p0, cluster.p4, cluster.p1),
+        -GetPlaneFunc(cluster.p0, cluster.p2, cluster.p4),
+        -GetPlaneFunc(cluster.p7, cluster.p6, cluster.p3),
+        -GetPlaneFunc(cluster.p7, cluster.p3, cluster.p5),
+        -GetPlaneFunc(cluster.p7, cluster.p5, cluster.p6)
+    };
+
+    for (int i = 0; i < 6; ++i)
+    {
+        if (!PlaneConeIntersect(Planes[i], lit)) return false;
+    }
+
+    return true;
+}
+
 //  int3 SV_GroupID 当前线程所在的线程组的ID，取值范围为(0,0,0)到(gX-1,gY-1,gZ-1)
 //  int3 SV_GroupThreadID 当前线程在线程组中的ID，取值范围为(0,0,0)到(tX-1,tY-1,tZ-1)
 //  int3 SV_DispatchThreadID 当前线程在所有线程组的ID，取值范围为(0,0,0)到(gX*tX-1, gY*tY-1, gZ*tZ-1)
@@ -92,30 +143,44 @@ void LightAssign (int3 threadId : SV_GroupThreadID, int3 groupId : SV_GroupID)
     uint i = threadId.x, j = threadId.y, k = groupId.x;
     uint3 clusterId_3D = uint3(i, j, k);
     uint clusterId_1D = Index3DTo1D(clusterId_3D);
-    
-    ClusterBox cluster  = _clusterBuffer[clusterId_1D];
-    // index in light assign buffer
+
+    ClusterBox cluster = _clusterBuffer[clusterId_1D];
     uint start = clusterId_1D * _maxNumLightsPerCluster;
     uint end = start;
 
-    for (int lightId = 0; lightId < _numLights; ++lightId)
+    uint point_count = 0;
+    for (int pointLightId = 0; pointLightId < _pointNumLights; ++pointLightId)
     {
-        PointLight lit = _lightBuffer[lightId];
-        if (ClusterLightIntersect(cluster, lit))
+        PointLight pl = _pointLightBuffer[pointLightId];
+        if (ClusterPointLightIntersect(cluster, pl))
         {
-            _lightAssignBuffer[end++] = (uint)lightId;
+            _lightAssignBuffer[end++] = (uint)pointLightId;
+            point_count++;
+        }
+    }
+    
+    uint spot_count = 0;
+    for (int spotLightId = 0; spotLightId < _spotNumLights; ++spotLightId)
+    {
+        SpotLight sl = _spotLightBuffer[spotLightId];
+        if (ClusterSpotLightIntersect(cluster, sl))
+        {
+            _lightAssignBuffer[end++] = (uint)spotLightId;
+            spot_count++;
         }
     }
 
     LightIndex lightIndex;
     lightIndex.start = start;
-    lightIndex.count = end - start;
+    lightIndex.pointCount = point_count;
+    lightIndex.spotCount = spot_count;
     _assignTable[clusterId_1D] = lightIndex;
-    // debug
-    Normal normal;
-    float4 plane = -GetPlaneFunc(cluster.p0, cluster.p4, cluster.p1);
-    float3 center = (cluster.p0 + cluster.p1 + cluster.p4 + cluster.p5) / 4;
-    normal.position = center;
-    normal.normal = plane.xyz;
-    _normalBuffer[clusterId_1D] = normal;
+
+    // // debug
+    // Normal normal;
+    // float4 plane = -GetPlaneFunc(cluster.p0, cluster.p4, cluster.p1);
+    // float3 center = (cluster.p0 + cluster.p1 + cluster.p4 + cluster.p5) / 4;
+    // normal.position = center;
+    // normal.normal = plane.xyz;
+    // _normalBuffer[clusterId_1D] = normal;
 }

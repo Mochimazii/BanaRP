@@ -108,7 +108,7 @@
                     );
 
                 
-                float3 color = ambient * ao;
+                float3 color = ambient * ao * 0.1;
                 float visibility = tex2D(_visibilityMap, uv).r;
                 
                 color += direct * visibility;
@@ -124,12 +124,12 @@
                 LightIndex lightIndex = _assignTable[clusterId_1D];
 
                 int start = lightIndex.start;
-                int end = start + lightIndex.count;
+                int pointEnd = start + lightIndex.pointCount;
 
-                for (int i = start; i < end; ++i)
+                for (int i = start; i < pointEnd; ++i)
                 {
                     uint lightId = _lightAssignBuffer[i];
-                    PointLight plight = _lightBuffer[lightId];
+                    PointLight plight = _pointLightBuffer[lightId];
 
                     float3 pL = normalize(plight.position - worldPos.xyz);
                     radiance = plight.color * plight.intensity;
@@ -142,6 +142,27 @@
                     attenuation *= attenuation;
 
                     color += PBR(N, V, pL, albedo, radiance, roughness, metallic) * attenuation;
+                }
+
+                int spotEnd = pointEnd + lightIndex.spotCount;
+                for (int i = pointEnd; i < spotEnd; ++i)
+                {
+                    uint lightId = _lightAssignBuffer[i];
+                    SpotLight slight = _spotLightBuffer[lightId];
+
+                    float3 pL = normalize(slight.position - worldPos.xyz);
+                    float theta = dot(pL, -slight.direction);
+                    float cutOff = cos(atan(slight.bottomRadius / slight.height));
+                    radiance = slight.color * slight.intensity;
+                    
+                    // 衰减
+                    float dist = distance(slight.position, worldPos.xyz);
+                    float attenuation = 1.0 / (dist * dist);
+                    radiance *= attenuation;
+                    if (theta > cutOff)
+                    {
+                        color += PBR(N, V, pL, albedo, radiance, roughness, metallic);
+                    }
                 }
                 
                 return float4(color, 1);
