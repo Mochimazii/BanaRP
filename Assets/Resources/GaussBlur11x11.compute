@@ -1,0 +1,82 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel GaussianBlur1x11Main
+#pragma kernel GaussianBlur11x1Main
+#pragma enable_d3d11_debug_symbols
+
+#define groupSize 256
+#define blurRadius 4
+#define cacheSize (groupSize + blurRadius * 2)
+
+Texture2D<float4> _InputTexture;
+RWTexture2D<float4> _OutputTexture;
+
+groupshared float4 cache[cacheSize];
+
+static const float weights[] = {
+    0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216
+};
+
+//  int3 SV_GroupID 当前线程所在的线程组的ID，取值范围为(0,0,0)到(gX-1,gY-1,gZ-1)
+//  int3 SV_GroupThreadID 当前线程在线程组中的ID，取值范围为(0,0,0)到(tX-1,tY-1,tZ-1)
+//  int3 SV_DispatchThreadID 当前线程在所有线程组的ID，取值范围为(0,0,0)到(gX*tX-1, gY*tY-1, gZ*tZ-1)
+//  uint3 SV_GroupIndex 当前线程在所在线程组内的下标，取值范围为0到tX*tY*tZ-1
+
+[numthreads(groupSize,1,1)]
+void GaussianBlur1x11Main (uint3 groupThreadId : SV_GroupThreadID, uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    uint2 imageSize;
+    _InputTexture.GetDimensions(imageSize.x, imageSize.y);
+
+    if (groupThreadId.x < blurRadius)
+    {
+        uint clampX = max((int)dispatchThreadId.x - blurRadius, 0);
+        cache[groupThreadId.x] = _InputTexture[uint2(clampX, dispatchThreadId.y)];
+    }
+    else if (groupThreadId.x >= groupSize - blurRadius)
+    {
+        uint clampX = min((int)dispatchThreadId.x + blurRadius, imageSize.x - 1);
+        cache[groupThreadId.x + 2 * blurRadius] = _InputTexture[uint2(clampX, dispatchThreadId.y)];
+    }
+
+    cache[blurRadius + groupThreadId.x] = _InputTexture[min(dispatchThreadId.xy, imageSize - 1)];
+
+    GroupMemoryBarrierWithGroupSync();
+
+    float4 color = weights[0] * cache[groupThreadId.x + blurRadius];
+    for (int i = 1; i <= blurRadius; i++)
+    {
+        color += weights[i] * cache[groupThreadId.x + blurRadius - i];
+        color += weights[i] * cache[groupThreadId.x + blurRadius + i];
+    }
+    _OutputTexture[dispatchThreadId.xy] = color;
+}
+
+[numthreads(1,groupSize,1)]
+void GaussianBlur11x1Main (uint3 groupThreadId : SV_GroupThreadID, uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+    uint2 imageSize;
+    _InputTexture.GetDimensions(imageSize.x, imageSize.y);
+
+    if (groupThreadId.y < blurRadius)
+    {
+        uint clampY = max((int)dispatchThreadId.y - blurRadius, 0);
+        cache[groupThreadId.y] = _InputTexture[uint2(dispatchThreadId.x, clampY)];
+    }
+    else if (groupThreadId.x >= groupSize - blurRadius)
+    {
+        uint clampY = min((int)dispatchThreadId.y + blurRadius, imageSize.y - 1);
+        cache[groupThreadId.y + 2 * blurRadius] = _InputTexture[uint2(dispatchThreadId.x, clampY)];
+    }
+
+    cache[blurRadius + groupThreadId.y] = _InputTexture[min(dispatchThreadId.xy, imageSize - 1)];
+
+    GroupMemoryBarrierWithGroupSync();
+
+    float4 color = weights[0] * cache[groupThreadId.y + blurRadius];
+    for (int i = 1; i <= blurRadius; i++)
+    {
+        color += weights[i] * cache[groupThreadId.y + blurRadius - i];
+        color += weights[i] * cache[groupThreadId.y + blurRadius + i];
+    }
+    _OutputTexture[dispatchThreadId.xy] = color;
+}

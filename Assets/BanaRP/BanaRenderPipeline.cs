@@ -26,6 +26,9 @@ public class BanaRenderPipeline : RenderPipeline
     // Light
     ClusterLight clusterLight;
     
+    // Blur
+    Blur _blur;
+    
     public BanaRenderPipeline(BanaRenderPipelineAsset asset)
     {
         renderPipelineAsset = asset;
@@ -68,6 +71,9 @@ public class BanaRenderPipeline : RenderPipeline
         
         // Light
         clusterLight = new ClusterLight();
+        
+        // Blur
+        _blur = new Blur();
     }
     
     protected override void Render (ScriptableRenderContext context, Camera[] cameras)
@@ -170,7 +176,7 @@ public class BanaRenderPipeline : RenderPipeline
     void PostFXPass(ScriptableRenderContext context, Camera camera)
     {
         CommandBuffer cmd = new CommandBuffer { name = "PostFX" };
-
+        
         if (renderPipelineAsset.TAA && camera.cameraType == CameraType.Game)
         {
             _taa.GetHistoryBuffer(out RenderTexture historyRead, out RenderTexture historyWrite);
@@ -178,10 +184,28 @@ public class BanaRenderPipeline : RenderPipeline
             Shader.SetGlobalTexture("_HistoryTex", historyRead);
 
             Shader.SetGlobalFloat("_BlendAlpha", _taa.BlendAlpha);
-
         
             cmd.Blit(BuiltinRenderTextureType.CameraTarget, historyWrite, _taa.taaMaterial);
             cmd.Blit(historyWrite, BuiltinRenderTextureType.CameraTarget);
+            context.ExecuteCommandBuffer(cmd);
+            cmd.Clear();
+        }
+
+        if (renderPipelineAsset.GaussianBlur)
+        {
+            // RenderTexture tempRT = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBHalf);
+            // cmd.Blit(BuiltinRenderTextureType.CameraTarget, tempRT);
+            // var destRT = _blur.DoBlur(tempRT);
+            // cmd.Blit(destRT, BuiltinRenderTextureType.CameraTarget);
+            // tempRT.Release();
+            
+            RenderTexture tempRT = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBHalf);
+            cmd.Blit(BuiltinRenderTextureType.CameraTarget, tempRT);
+            _blur.DoHorizontalBlur(ref tempRT, ref _blur.tempRT);
+            _blur.DoVerticalBlur(ref _blur.tempRT,ref _blur.destRT);
+            cmd.Blit(_blur.destRT, BuiltinRenderTextureType.CameraTarget);
+            tempRT.Release();
+            
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
         }

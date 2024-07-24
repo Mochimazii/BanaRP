@@ -19,6 +19,10 @@ public class BanaRenderPipelineAsset : RenderPipelineAsset
     [SerializeField]
     public CSMSettings csmSettings;
     
+    [Header("Post Processing Settings")]
+    [SerializeField]
+    public bool GaussianBlur = true;
+    
     // Unity 在渲染第一帧之前调用此方法。
     // 如果渲染管线资源上的设置改变，Unity 将销毁当前的渲染管线实例，并在渲染下一帧之前再次调用此方法。
     protected override RenderPipeline CreatePipeline()
