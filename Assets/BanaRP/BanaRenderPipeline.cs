@@ -193,18 +193,13 @@ public class BanaRenderPipeline : RenderPipeline
 
         if (renderPipelineAsset.GaussianBlur)
         {
-            // RenderTexture tempRT = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBHalf);
-            // cmd.Blit(BuiltinRenderTextureType.CameraTarget, tempRT);
-            // var destRT = _blur.DoBlur(tempRT);
-            // cmd.Blit(destRT, BuiltinRenderTextureType.CameraTarget);
-            // tempRT.Release();
-            
+            _blur.CreateTextures();
             RenderTexture tempRT = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBHalf);
-            cmd.Blit(BuiltinRenderTextureType.CameraTarget, tempRT);
-            _blur.DoHorizontalBlur(ref tempRT, ref _blur.tempRT);
-            _blur.DoVerticalBlur(ref _blur.tempRT,ref _blur.destRT);
+            cmd.Blit(BuiltinRenderTextureType.CameraTarget, tempRT, new Material(Shader.Find("BanaRP/FlipY")));
+            _blur.DoHorizontalBlur(cmd,ref tempRT, ref _blur.tempRT);
+            _blur.DoVerticalBlur(cmd, ref _blur.tempRT,ref _blur.destRT);
             cmd.Blit(_blur.destRT, BuiltinRenderTextureType.CameraTarget);
-            tempRT.Release();
+            RenderTexture.ReleaseTemporary(tempRT);
             
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();

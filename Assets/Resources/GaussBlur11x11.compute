@@ -7,8 +7,8 @@
 #define blurRadius 4
 #define cacheSize (groupSize + blurRadius * 2)
 
-Texture2D<float4> _InputTexture;
-RWTexture2D<float4> _OutputTexture;
+shared Texture2D<float4> _InputTexture;
+shared RWTexture2D<float4> _OutputTexture;
 
 groupshared float4 cache[cacheSize];
 
@@ -62,7 +62,7 @@ void GaussianBlur11x1Main (uint3 groupThreadId : SV_GroupThreadID, uint3 dispatc
         uint clampY = max((int)dispatchThreadId.y - blurRadius, 0);
         cache[groupThreadId.y] = _InputTexture[uint2(dispatchThreadId.x, clampY)];
     }
-    else if (groupThreadId.x >= groupSize - blurRadius)
+    else if (groupThreadId.y >= groupSize - blurRadius)
     {
         uint clampY = min((int)dispatchThreadId.y + blurRadius, imageSize.y - 1);
         cache[groupThreadId.y + 2 * blurRadius] = _InputTexture[uint2(dispatchThreadId.x, clampY)];
