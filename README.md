@@ -7,6 +7,7 @@ Custom Render Pipeline with Unity SRP, include following features:
 - TAA
 - GPU Instance / Frustum Culling / Oclussion Culling
 - Cluster Based Defered Lighting
+- Guassian Blur (Implemented with compute shader)
 
 # Gallery
 
@@ -25,6 +26,10 @@ Custom Render Pipeline with Unity SRP, include following features:
 #### TAA:
 
 ![TAA](Image/TAA.png)
+
+#### Gaussian Blur:
+
+![GaussianBlur](Image/Gauss.png)
 
 #### GPU Instance / frustum culling / oclussion culling using compute shader:
 

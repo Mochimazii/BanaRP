@@ -108,7 +108,7 @@
                     );
 
                 
-                float3 color = ambient * ao * 0.1;
+                float3 color = ambient * ao;
                 float visibility = tex2D(_visibilityMap, uv).r;
                 
                 color += direct * visibility;
