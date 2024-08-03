@@ -7,6 +7,8 @@ public class Blur
     
     public RenderTexture tempRT;
     public RenderTexture destRT;
+    
+    private ComputeBuffer gaussianWeightsBuffer;
 
     public Blur()
     {
@@ -17,6 +19,30 @@ public class Blur
         // destRT = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBHalf);
         // destRT.enableRandomWrite = true;
         // destRT.Create();
+    }
+    
+    public float[] CalculateGaussianWeights(int radius, float sigma)
+    {
+        float[] weights = new float[radius * 2 + 1];
+        float twoSigmaSquare = 2.0f * sigma * sigma;
+        float sigmaRoot = Mathf.Sqrt(twoSigmaSquare * Mathf.PI);
+        float total = 0.0f;
+        for (int i = -radius; i <= radius; i++)
+        {
+            float distance = i * i;
+            int index = i + radius;
+            weights[index] = Mathf.Exp(-distance / twoSigmaSquare) / sigmaRoot;
+            total += weights[index];
+        }
+        for (int i = 0; i < weights.Length; i++)
+        {
+            weights[i] /= total;
+        }
+        
+        // set weights to struct buffer
+        gaussianWeightsBuffer = new ComputeBuffer(weights.Length, sizeof(float));
+        
+        return weights;
     }
 
     public void CreateTextures()
