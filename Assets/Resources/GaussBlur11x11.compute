@@ -15,6 +15,9 @@ groupshared float4 cache[cacheSize];
 static const float weights[] = {
     0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216
 };
+// static const float weights[] = {
+//     0.398943, 0.241971, 0.0539911, 0.00443186, 0.000133831
+// };
 
 //  int3 SV_GroupID 当前线程所在的线程组的ID，取值范围为(0,0,0)到(gX-1,gY-1,gZ-1)
 //  int3 SV_GroupThreadID 当前线程在线程组中的ID，取值范围为(0,0,0)到(tX-1,tY-1,tZ-1)

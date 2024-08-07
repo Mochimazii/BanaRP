@@ -193,6 +193,10 @@ public class BanaRenderPipeline : RenderPipeline
         if (renderPipelineAsset.GaussianBlur)
         {
             _blur.CreateTextures();
+            // test weight
+            // _blur.CalculateGaussianWeights(2, 1);
+            // Debug.Log("Gaussian Weights: " + string.Join(",", _blur.CalculateGaussianWeights(2, 1)));
+            //
             RenderTexture tempRT = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBHalf);
             cmd.Blit(BuiltinRenderTextureType.CameraTarget, tempRT, new Material(Shader.Find("BanaRP/FlipY")));
             _blur.DoHorizontalBlur(cmd,ref tempRT, ref _blur.tempRT);
