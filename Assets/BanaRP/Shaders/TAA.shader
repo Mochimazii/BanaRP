@@ -63,7 +63,7 @@
                 #if UNITY_UV_STARTS_AT_TOP
                     mainTexUV.y = 1.0 - mainTexUV.y;
                 #endif
-                mainTexUV = mainTexUV - _Jitter;
+                mainTexUV = mainTexUV + _Jitter;
                 float4 currColor = SAMPLE_TEXTURE2D(_MainTex, sampler_Linear_Clamp, mainTexUV);
                 
                 // reprojection start

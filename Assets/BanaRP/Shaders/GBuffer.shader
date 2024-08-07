@@ -146,6 +146,7 @@
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.uv = TRANSFORM_TEX(IN.uv, _MainTex);
 
+                // 法线和切线应该传到 pixel shader 中构建 TBN 矩阵, 这里直接构建会插值，有问题 
                 float3 worldNormal = TransformObjectToWorldNormal(IN.normal);
                 float3 worldTangent = TransformObjectToWorldDir(IN.tangent.xyz);
                 float3 worldBinormal = cross(worldNormal, worldTangent) * IN.tangent.w;
@@ -200,8 +201,9 @@
                 float4 prevPositionCS = mul(_prevJitteredVpMatrix, positionWS);
                 prevPositionCS /= prevPositionCS.w;
                 float2 prevScreenPos = prevPositionCS.xy * 0.5 + 0.5;
-                prevScreenPos = prevScreenPos + _prevJitter - _Jitter;
+                prevScreenPos = prevScreenPos + _prevJitter;
                 float2 currScreenPos = i.positionCS.xy * 0.5 + 0.5;
+                currScreenPos = currScreenPos + _Jitter;
 
                 float2 motionVec = currScreenPos - prevScreenPos;
 

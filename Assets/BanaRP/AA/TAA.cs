@@ -74,8 +74,14 @@ public class TAA
 
         camera.projectionMatrix = proj;
         
+        // Print the proj matrix
+        Debug.Log(proj.ToString());
+        
         Matrix4x4 viewMat = camera.worldToCameraMatrix;
         Matrix4x4 projMat = GL.GetGPUProjectionMatrix(proj, false);
+        
+        Debug.Log(projMat.ToString());
+        
         Matrix4x4 viewProjMat = projMat * viewMat;
         currentJitteredVpMatrix = viewProjMat;
 

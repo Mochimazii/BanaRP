@@ -32,7 +32,6 @@ public class BanaRenderPipeline : RenderPipeline
     public BanaRenderPipeline(BanaRenderPipelineAsset asset)
     {
         renderPipelineAsset = asset;
-        
         // 创建纹理
         gDepth  = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.Depth, RenderTextureReadWrite.Linear);
         gBuffers[0] = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);

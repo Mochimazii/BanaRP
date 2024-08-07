@@ -1,4 +1,4 @@
-﻿Shader "BanaRP/LightPass"
+﻿ Shader "BanaRP/LightPass"
 {
     Properties
     {
