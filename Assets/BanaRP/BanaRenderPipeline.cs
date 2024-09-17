@@ -186,7 +186,7 @@ public class BanaRenderPipeline : RenderPipeline
         
             cmd.Blit(BuiltinRenderTextureType.CameraTarget, historyWrite, _taa.taaMaterial);
             cmd.Blit(historyWrite, BuiltinRenderTextureType.CameraTarget);
-            context.ExecuteCommandBuffer(cmd);
+            context.ExecuteCommandBuffer(cmd); 
             cmd.Clear();
         }
 

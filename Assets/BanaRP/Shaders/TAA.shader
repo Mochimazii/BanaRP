@@ -84,19 +84,39 @@
                 float2 historyUV = i.uv - motion;
                 float4 historyColor = SAMPLE_TEXTURE2D(_HistoryTex, sampler_HistoryTex, historyUV);
 
+                // anti flickering
+                if (historyColor.a < 500)
+                {
+                    historyColor.a += 1.0;
+                }
+                
                 // Neighborhood Clamping
                 float3 aabbMin, aabbMax;
                 aabbMax = aabbMin = rgbToYCoCg(currColor);
                 for (int i = 0; i < 9; ++i)
                 {
-                    float3 color = rgbToYCoCg(_MainTex.Sample(sampler_Point_Clamp, mainTexUV, kOffsets3x3[i]));
+                    float3 color = rgbToYCoCg(_MainTex.Sample(sampler_Linear_Clamp, mainTexUV, kOffsets3x3[i]));
                     aabbMin = min(aabbMin, color);
                     aabbMax = max(aabbMax, color);
                 }
                 float3 historyYCoCg = rgbToYCoCg(historyColor);
+
+                float3 prevHistoryColor = historyColor.rgb;
                 historyColor.rgb = YCoCgTorgb(ClipAABB( aabbMin, aabbMax, historyYCoCg));
+                //return lerp(historyColor, currColor, _BlendAlpha);
                 
-                return lerp(historyColor, currColor, _BlendAlpha);
+                float3 diff = abs(prevHistoryColor - historyColor.rgb);
+                if (any(diff > 0.012))  
+                {
+                    historyColor.a = 0.0;
+                }
+                float t = max(0, 1 - historyColor.a / 500.0);
+                _BlendAlpha = lerp(0.95, 0.999, t);
+
+                float alpha = historyColor.a;
+                float4 color = lerp(currColor, historyColor, _BlendAlpha);
+                color.a = alpha;
+                return color;
             }
             ENDHLSL
         }

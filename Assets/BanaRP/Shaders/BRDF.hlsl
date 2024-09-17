@@ -89,9 +89,9 @@ float3 IBL(
 {
     roughness = min(roughness, 0.99);
 
-    float3 H = normalize(V);
+    //float3 H = normalize(V);
     float NdotV = max(dot(N, V), 0);
-    float HdotV = max(dot(H, V), 0);
+    //float HdotV = max(dot(H, V), 0);
     float3 R = normalize(reflect(-V, N));
 
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
