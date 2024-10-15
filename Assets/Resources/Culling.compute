@@ -7,7 +7,7 @@ bool _occlusionCull;//todo:not set
 int _instanceCount;
 int _depthTextureSize;
 float4 _planes[6];
-float4 _bounds[8];
+float4 _bounds[8];// 可以只传递左下角和右上角的两个点，然后在shader里面计算出8个点
 
 float4x4 _vpMatrix;
 Texture2D _hizBuffer;
@@ -21,6 +21,18 @@ RWStructuredBuffer<uint> _argsBuffer;                   // 绘制参数
 bool GetSide(float4 plane, float3 p)
 {
     return (dot(plane.xyz, p) + plane.w) > 0;   
+}
+
+void CalculateBoundingBoxVertices(float4 center, float3 extents, out float4 bounds[8])
+{
+    bounds[0] = float4(center.xyz - extents, 1);
+    bounds[1] = float4(center.xyz + extents, 1);
+    bounds[2] = float4(center.x - extents.x, center.y - extents.y, center.z + extents.z, 1);
+    bounds[3] = float4(center.x - extents.x, center.y + extents.y, center.z - extents.z, 1);
+    bounds[4] = float4(center.x + extents.x, center.y - extents.y, center.z - extents.z, 1);
+    bounds[5] = float4(center.x - extents.x, center.y + extents.y, center.z + extents.z, 1);
+    bounds[6] = float4(center.x + extents.x, center.y - extents.y, center.z + extents.z, 1);
+    bounds[7] = float4(center.x + extents.x, center.y + extents.y, center.z - extents.z, 1);
 }
 
 // true box 在视椎体外, false box 在视椎体内
